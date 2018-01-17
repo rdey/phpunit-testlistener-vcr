@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\TestListener;
 use PHPUnit\Framework\TestSuite;
 use PHPUnit\Framework\Warning;
+use VCR\Configuration;
 use VCR\VCR;
 
 /**
@@ -28,6 +29,21 @@ use VCR\VCR;
  */
 final class VCRTestListener implements TestListener
 {
+    /**
+     * @var array
+     */
+    protected $options = array();
+
+    /**
+     * Constructor.
+     *
+     * @param array $options
+     */
+    public function __construct(array $options = array())
+    {
+        $this->options = $options;
+    }
+
     public function startTest(Test $test): void
     {
         $class = \get_class($test);
@@ -47,6 +63,11 @@ final class VCRTestListener implements TestListener
 
         if (empty($cassetteName)) {
             return;
+        }
+
+        $configuration = VCR::configure();
+        foreach ($this->options as $option => $value) {
+            self::configure($configuration, $option, $value);
         }
 
         // If the cassette name ends in .json, then use the JSON storage format
@@ -82,6 +103,29 @@ final class VCRTestListener implements TestListener
         }
 
         return $matches;
+    }
+
+    private static function configure(Configuration $configuration, $option, $value)
+    {
+        switch ($option) {
+            case 'mode':
+                $configuration->setMode($value);
+                break;
+            case 'cassettePath':
+                $configuration->setCassettePath($value);
+                break;
+            case 'requestMatchers':
+                $configuration->enableRequestMatchers($value);
+                break;
+            case 'whiteList':
+                $configuration->setWhiteList($value);
+                break;
+            case 'blackList':
+                $configuration->setBlackList($value);
+                break;
+            default:
+                throw new \RuntimeException(sprintf("Unknown VCR configuration option \"%s\"", $option));
+        }
     }
 
     public function endTest(Test $test, float $time): void
